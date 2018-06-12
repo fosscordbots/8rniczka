@@ -1,0 +1,25 @@
+{
+  "name": "8rniczka",
+  "version": "3.3.3",
+  "description": "Introducing the new legendary card, Ośmiorniczka The Squid! Hurr durr, so lyrics bot here.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "nodemon src/index.js",
+    "lint": "eslint --ext .js --ignore-path .gitignore .",
+    "lint:fix": "eslint  --fix --ext .js --ignore-path .gitignore ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/takidelfin/8rniczka"
+  },
+  "keywords": [
+    "8rniczka"
+  ],
+  "author": "takidelfin",
+  "license": "UPL",
+  "dependencies": {
+    "discord.js": "^11.3.2",
+    "eslint": "^4.19.1",
+    "eslint-config-standard": "^11.0.0"
+  }
+}
