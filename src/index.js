@@ -102,7 +102,7 @@ client.on('message', async message => {
     }
     return message.channel.send({ embed })
   }
-  message.channel.send(':warning: Czy tobie mamusia nie mówiła aby nie zarzucać czegoś czego nie ma? idz trzepnij się głową o powietrze.')
+  message.channel.send(client.emojis.find('name', 'warning') + ' Command doesn\'t exist! Please see *`8help`*')
 })
 client.login(config.token)
 
