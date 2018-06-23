@@ -67,7 +67,7 @@ client.on('message', async message => {
     return
   }
   if (!message.content.startsWith(config.prefix)) return
-  if (command === 'projekt') {
+  if (command === 'project') {
     message.react(client.emojis.find('name', 'opensource'))
     message.react(client.emojis.find('name', 'closedsource'))
     return
@@ -79,6 +79,28 @@ client.on('message', async message => {
     }
     mdn(toSearch, message)
     return
+  }
+  if (command === 'help') {
+    const embed = {
+      title: '8rniczka Commands',
+      description: 'Currently, we support ESLint for JavaScript code blocks and some commands.',
+      color: 16741749,
+      fields: [
+        {
+          name: '```\n 8mdn <query> ```',
+          value: 'Returns description, syntax, parameters and return value packed into one rich embed!'
+        },
+        {
+          name: '```\n 8project <description> ```',
+          value: 'Creates the poll, helps your team choose between open or closed source software.'
+        }
+      ],
+      footer: {
+        icon_url: 'https://cdn.discordapp.com/avatars/456131051496931353/863309530e28aa9d9a62d106c01a59f1.png',
+        text: '8rniczka'
+      }
+    }
+    return message.channel.send({ embed })
   }
   message.channel.send(':warning: Czy tobie mamusia nie mówiła aby nie zarzucać czegoś czego nie ma? idz trzepnij się głową o powietrze.')
 })
@@ -138,10 +160,10 @@ const mdn = async (query, message) => {
   }
   await rp(rpOptions).then(data => {
     let url = data('.result-1').find('h4').children('a').attr('href')
+    if (url == null || url === undefined) return message.channel.send('We are sorry, but query returned nothing.')
     if (url.includes('https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/')) return message.channel.send('Query returned the reference to Errors page, but they aren\'t supported yet. There\'s a link if you want it: ' + url)
     if (url.includes('https://developer.mozilla.org/en-US/docs/Archive/')) return message.channel.send('Query returned a reference to Archived page, but it isn\'t supported yet. There \'s the link if you want it: ' + url)
     if (!url.includes('https://developer.mozilla.org/en-US/docs/Web/JavaScript/')) return message.channel.send('We are sorry, but query returned nothing.')
-    // if (url.endsWith('/prototype'))
     getSyntax(url).then(data2 => {
       let parametersRaw = getMarkdowned(data2('dl').html())
       let descriptionRaw = getMarkdowned(data2('p').html())
