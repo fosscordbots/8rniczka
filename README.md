@@ -8,7 +8,9 @@
 [<img src="https://cdn.rawgit.com/takidelfin/8rniczka/master/docs/discordjs.svg" height="56px"/>](https://discord.js.org/) [<img src="https://cdn.rawgit.com/takidelfin/8rniczka/master/docs/opusscript.svg" height="56px"/>](https://github.com/abalabahaha/opusscript) [<img src="https://cdn.rawgit.com/takidelfin/8rniczka/master/docs/simpleyoutubeapi.svg" height="56px"/>](https://github.com/HyperCoder2975/simple-youtube-api) [<img src="https://cdn.rawgit.com/takidelfin/8rniczka/master/docs/nodeytdlcore.svg" height="56px"/>](https://github.com/fent/node-ytdl-core)
 
 </p>
-
-Its frickin' good meme. octopus. squidy stuff lol
-don't be broom just use discord.
-This bot is used only by Anon Stróż discord server. If you use it -ahh, go away. 
+### Features and TODO
+- [x] **JavaScript code linting** - great for *support servers*, lints code.
+- [x] **JavaScript docs from MDN** - allows to search the Docs. Still needs testing.
+- [ ] **Web configuration** - customize *8rniczka* to fit your server.
+- [ ] **RSS support** - rich embedded RSS feed
+- [ ] **More features?** - [create an issue!](https://github.com/takidelfin/8rniczka/issues/new)
