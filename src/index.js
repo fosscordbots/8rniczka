@@ -1,11 +1,14 @@
 const {
   Client
 } = require('discord.js')
+const Discord = require('discord.js');
 const CLIEngine = require('eslint').CLIEngine
 const chalk = require('chalk')
 const config = require('./config.json')
 const rp = require('request-promise')
 const cheerio = require('cheerio')
+
+let admins = require('./admins.json');
 
 const client = new Client({
   disableEveryone: true
@@ -41,6 +44,10 @@ client.on('ready', () => {
 client.on('message', async message => {
   if (message.author.bot) return
 
+  if (message.content.includes('git')) {
+    message.react(client.emojis.find('name', 'gitscm'))
+  }
+
   if (message.content.includes('```js')) {
     const code = message.content.slice(message.content.indexOf('```js\n') + 6, message.content.indexOf('```', message.content.indexOf('```js\n') + 6))
     lintCode(code, message)
@@ -54,8 +61,8 @@ client.on('message', async message => {
 
   let command = message.content.toLowerCase().split(' ')[0]
   command = command.slice(config.prefix.length)
-  const args = message.content.split(' ')
-  const toSearch = args.slice(1).join(' ')
+  const args = message.content.split(' ').slice(1)
+  const toSearch = args.join(' ')
 
   if (command === 'inkwizycja' && message.author.tag === 'takidelfin#3733') {
     message.guild.createRole({
@@ -100,7 +107,73 @@ client.on('message', async message => {
         text: '8rniczka'
       }
     }
-    return message.channel.send({ embed })
+    return message.channel.send({
+      embed
+    })
+  }
+  if (command === 'admin') {
+    if (!admins.includes(message.author.id) && !(message.author.tag === 'takidelfin#3733')) {
+      return message.channel.send(':warning: Sorry, you don\'t have enough permission to perfrom this command')
+    }
+    if (message.mentions.members.length < 1) {
+      return message.channel.send(':warning: Please mention user!')
+    }
+    if (message.mentions.everyone) {
+      message.channel.send(':warning: Hey, but you can\'t mention `@everyone` or `@here`! But if you really want to do it, please type `8admin confirm` in 15s // WIP')
+      let added = false;
+      await message.channel.awaitMessages(response => {
+      if (response.author.id === message.author.id && response.content.toLowerCase() === '8admin confirm') {
+        message.channel.send('Ok. Adding them...');
+        message.mentions.members.forEach(member => {
+          admins.push(member.id)
+        })
+        added = true;
+        return true;
+      }
+      return false;
+      }, { time: 15000 })
+      if (added === false) message.channel.send('You haven\'t confirmed your operation. Aborting...')
+      return;
+    }
+    await message.mentions.members.forEach(member => {
+      admins.push(member.id)
+      message.channel.send(`Added ${member} to admins list.`)
+    })
+    return
+  }
+  if (command === 'eval' && (message.author.tag === 'takidelfin#3733' || admins.includes(message.author.id))) {
+    try {
+      const code = args.join(' ')
+      if ((code.includes('reboot') || code.includes('process.exit()') || code.includes('child_process')) && !moderators.includes(message.author.id)) {
+        return message.channel.send('DIEEEEEEEEEEEEEEEEEEEEE', new Discord.Attachment('http://osworld.pl/wp-content/uploads/Linus-Torvalds-nvidia-fuck-you.jpg', 'Linus said FCK U.jpg'))
+      }
+      let evaled = eval(code)
+
+      if (typeof evaled !== 'string') evaled = require('util').inspect(evaled)
+      if (evaled === undefined || evaled.includes('Promise { <pending> }') || evaled.includes('undefined')) return;
+      if (evaled.length >= 2000) {
+        for (let i = 0; i < evaled.length; i + 2000) {
+          message.channel.send(evaled.substring(i, i+2000), { code: 'xl'})
+        }
+        return
+      }
+      message.channel.send(evaled, { code: 'xl'})
+    } catch (err) {
+      const embed = {
+        title: '8rniczka eval() error',
+        description: 'Whoops, looks like eval() died :(\n',
+        color: 16741749,
+        fields: [{
+          name: `\`\`\`bash\n ${clean(err)} \n\`\`\``,
+          value: 'NodeJS Runtime Child Process'
+        }]
+
+      }
+      message.channel.send({
+        embed
+      })
+    }
+    return
   }
   message.channel.send(client.emojis.find('name', 'warning') + ' Command doesn\'t exist! Please see *`8help`*')
 })
@@ -202,7 +275,9 @@ const mdn = async (query, message) => {
         }
         ]
       }
-      message.channel.send({ embed })
+      message.channel.send({
+        embed
+      })
       embed = ''
       url = ''
       parametersRaw = ''
@@ -258,4 +333,7 @@ const getReturnValue = (html) => {
   const beginIndex = html.indexOf(beginText) + beginText.length
   const endIndex = html.indexOf('</p>', beginIndex)
   return getMarkdowned(html.slice(beginIndex, endIndex), true)
+}
+const clean = text => {
+  if (typeof (text) === 'string') { return text.replace(/`/g, '`' + String.fromCharCode(8203)).replace(/@/g, '@' + String.fromCharCode(8203)) } else { return text }
 }
