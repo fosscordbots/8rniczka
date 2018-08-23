@@ -290,17 +290,6 @@ const mdn = async (query, message) => {
         }
         ]
       }
-<<<<<<< HEAD
-      message.channel.send({
-        embed
-      })
-      embed = ''
-      url = ''
-      parametersRaw = ''
-      descriptionRaw = ''
-      returnsRaw = ''
-      syntaxData = ''
-=======
       message.channel.send({ embed })
       embed = null
       url = null
@@ -308,7 +297,6 @@ const mdn = async (query, message) => {
       descriptionRaw = null
       returnsRaw = null
       syntaxData = null
->>>>>>> 399a2d1435948b3de5b0ba450f25784fac3dda00
     }).catch(console.error)
   }).catch(console.error)
 }
