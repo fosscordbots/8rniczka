@@ -1,11 +1,13 @@
-const {
-  Client
-} = require('discord.js')
+const { Client } = require('discord.js')
 const CLIEngine = require('eslint').CLIEngine
 const chalk = require('chalk')
 const config = require('./config.json')
 const rp = require('request-promise')
 const cheerio = require('cheerio')
+const fs = require('fs')
+var TurndownService = require('turndown')
+
+var turndownService = new TurndownService()
 
 const client = new Client({
   disableEveryone: true
@@ -41,6 +43,12 @@ client.on('ready', () => {
 client.on('message', async message => {
   if (message.author.bot) return
 
+  if (message.content.includes('git')) {
+    message.react(client.emojis.find('name', 'gitscm'))
+  }
+  if (message.content.includes('Rules of the Duel')) {
+    message.react(client.emojis.find('name', 'success'))
+  }
   if (message.content.includes('```js')) {
     const code = message.content.slice(message.content.indexOf('```js\n') + 6, message.content.indexOf('```', message.content.indexOf('```js\n') + 6))
     lintCode(code, message)
@@ -104,6 +112,16 @@ client.on('message', async message => {
   }
   message.channel.send(client.emojis.find('name', 'warning') + ' Command doesn\'t exist! Please see *`8help`*')
 })
+client.on('messageReactionAdd', (reaction, user) => {
+  if (reaction.message.guild.id === '482192690671386645') {
+    const guild = reaction.message.guild
+    if (reaction.emoji.id === '459375170021228554') {
+      user.send('Yo! We are so happy that you joined our server & accepted rules, have fun on Moltenshard Server!')
+      user.send('# Minecraft Server IP\nmc.digitalflames.me\n# Minecraft Version\n1.13', { code: 'bash' })
+      guild.members.find('id', user.id).addRole(guild.roles.find('id', '482207666869895168'), 'Accepted the rules!')
+    }
+  }
+})
 client.login(config.token)
 
 const lintCode = (code, message) => {
@@ -165,6 +183,7 @@ const mdn = async (query, message) => {
     if (url.includes('https://developer.mozilla.org/en-US/docs/Archive/')) return message.channel.send('Query returned a reference to Archived page, but it isn\'t supported yet. There \'s the link if you want it: ' + url)
     if (!url.includes('https://developer.mozilla.org/en-US/docs/Web/JavaScript/')) return message.channel.send('We are sorry, but query returned nothing.')
     getSyntax(url).then(data2 => {
+      message.channel.send(data2('p').html())
       let parametersRaw = getMarkdowned(data2('dl').html())
       let descriptionRaw = getMarkdowned(data2('p').html())
       let returnsRaw = getReturnValue(data2('body').html())
@@ -203,12 +222,12 @@ const mdn = async (query, message) => {
         ]
       }
       message.channel.send({ embed })
-      embed = ''
-      url = ''
-      parametersRaw = ''
-      descriptionRaw = ''
-      returnsRaw = ''
-      syntaxData = ''
+      embed = null
+      url = null
+      parametersRaw = null
+      descriptionRaw = null
+      returnsRaw = null
+      syntaxData = null
     }).catch(console.error)
   }).catch(console.error)
 }
@@ -222,36 +241,38 @@ const getSyntax = async url => {
   return rp(rpOptions)
 }
 const getMarkdowned = html => {
-  let mdflavor = html
-    .replace(/ <code>{{Optional_inline}}<\/code>/gi, '')
-    .replace(/\{\{optional_inline\}\}/gi, '')
-    .replace(/<code><strong>/gi, '**`')
-    .replace(/<strong>/gi, '**')
-    .replace(/<dt><code>/gi, '```')
-    .replace(/<dt>/gi, '')
-    .replace(/<dd>/gi, '')
-    .replace(/<var>/gi, '')
-    .replace(/<code>/gi, ' `')
-    .replace(/<em>/gi, '*')
-    .replace(/<\/strong><\/code>/gi, '`**')
-    .replace(/<\/strong>/gi, '**')
-    .replace(/<\/code><\/dt>/gi, '```')
-    .replace(/<\/dt>/gi, '')
-    .replace(/<\/dd>/gi, '')
-    .replace(/<\/var>/gi, '')
-    .replace(/<\/code>/gi, '` ')
-    .replace(/<\/em>/gi, '*')
-    .replace(/<dl>/gi, '')
-    .replace(/<\/dl>/gi, '')
-    .replace(/&#xA0;/gi, ' ')
-    .replace(/{{jsxref\(&quot;/gi, '*')
-    .replace(/&quot;\)}}/gi, '*')
-    .replace(/&quot;/gi, '')
-    .replace(/&gt;/gi, '>')
-    .replace(/&lt;/gi, '<')
-  return mdflavor
+  // let mdflavor = html
+  //   .replace(/ <code>{{Optional_inline}}<\/code>/gi, '')
+  //   .replace(/\{\{optional_inline\}\}/gi, '')
+  //   .replace(/<code><strong>/gi, '**`')
+  //   .replace(/<strong>/gi, '**')
+  //   .replace(/<dt><code>/gi, '```')
+  //   .replace(/<dt>/gi, '')
+  //   .replace(/<dd>/gi, '')
+  //   .replace(/<var>/gi, '')
+  //   .replace(/<code>/gi, ' `')
+  //   .replace(/<em>/gi, '*')
+  //   .replace(/<\/strong><\/code>/gi, '`**')
+  //   .replace(/<\/strong>/gi, '**')
+  //   .replace(/<\/code><\/dt>/gi, '```')
+  //   .replace(/<\/dt>/gi, '')
+  //   .replace(/<\/dd>/gi, '')
+  //   .replace(/<\/var>/gi, '')
+  //   .replace(/<\/code>/gi, '` ')
+  //   .replace(/<\/em>/gi, '*')
+  //   .replace(/<dl>/gi, '')
+  //   .replace(/<\/dl>/gi, '')
+  //   .replace(/&#xA0;/gi, ' ')
+  //   .replace(/{{jsxref\(&quot;/gi, '*')
+  //   .replace(/&quot;\)}}/gi, '*')
+  //   .replace(/&quot;/gi, '')
+  //   .replace(/&gt;/gi, '>')
+  //   .replace(/&lt;/gi, '<')
+  // return mdflavor
+  return turndownService.turndown(html)
 }
 const getReturnValue = (html) => {
+  fs.writeFile('./returns.txt', html, err => console.error(err))
   const beginText = `<h3 id="Return_value">Return value</h3>
 
 <p>`
